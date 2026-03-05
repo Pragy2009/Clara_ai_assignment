@@ -1,0 +1,259 @@
+{
+  "name": "Pipeline A: Demo Call Processing",
+  "nodes": [
+    {
+      "parameters": {
+        "fileSelector": "/files/dataset/demo_calls/*.txt",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        -400,
+        -160
+      ],
+      "id": "3a946299-f835-4e9d-bf51-a1cd672b34d7",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "destinationKey": "transcript",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -240,
+        -288
+      ],
+      "id": "efbc3726-bd98-44c4-a38e-0c6762fd42c4",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -544,
+        -288
+      ],
+      "id": "6464da2b-dbd5-4b3c-8835-efb7c802e1b7",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const text = $json.transcript;\n\n// extract company\nfunction extractCompany(text) {\n  const match = text.match(/this is (.*?) from/i);\n  return match ? match[1] : \"demo_service_company\";\n}\n\n// extract hours\nfunction extractHours(text) {\n  const match = text.match(/(\\d{1,2}\\s?(am|pm))\\s?to\\s?(\\d{1,2}\\s?(am|pm))/i);\n  if (!match) return null;\n\n  return {\n    days: \"unknown\",\n    start: match[1],\n    end: match[3],\n  };\n}\n\n// detect emergency keywords\nfunction detectEmergencies(text) {\n  const keywords = [\"fire\", \"gas leak\", \"flood\", \"burst pipe\", \"emergency\"];\n  return keywords.filter(k => text.toLowerCase().includes(k));\n}\n\nconst company = extractCompany(text);\n\nreturn {\n  json: {\n    account_id: company.replace(/\\s+/g, \"_\"),\n    company_name: company,\n    business_hours: extractHours(text),\n    emergency_definition: detectEmergencies(text),\n    version: \"v1\"\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        -160
+      ],
+      "id": "a5f05b47-9c03-43d5-8d40-df1cf78d042c",
+      "name": "Extract Account Memo"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const account = $json;\n\nreturn {\n  json: {\n    ...account,\n\n    agent_spec: {\n      agent_name: account.company_name + \" Assistant\",\n      voice: \"friendly_professional\",\n\n      conversation_flow: {\n        greeting: \"Thank you for calling \" + account.company_name + \". How can I help you today?\",\n\n        business_hours_flow: [\n          \"Ask caller reason for calling\",\n          \"Collect caller name\",\n          \"Collect caller phone number\",\n          \"Schedule appointment or provide information\",\n          \"Confirm next steps\",\n          \"Close politely\"\n        ],\n\n        after_hours_flow: [\n          \"Greet caller\",\n          \"Check if emergency\",\n          \"Collect caller details\",\n          \"Promise callback next business day\"\n        ]\n      }\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        -288
+      ],
+      "id": "a0ec0ae7-cacd-45ac-99bd-4c481d188126",
+      "name": "Generate Agent Spec"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const data = $json;\n\nreturn {\n  json: {\n    account_id: data.account_id,\n    company_name: data.company_name,\n    business_hours: data.business_hours,\n    emergency_definition: data.emergency_definition,\n    version: data.version,\n    agent_spec: data.agent_spec\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        -160
+      ],
+      "id": "a1aa1142-4da1-45c4-9271-efc93d3bb2b0",
+      "name": "Format Output"
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "options": {
+          "fileName": "account_memo.json"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        416,
+        -288
+      ],
+      "id": "d208538c-3cd1-4e59-b305-8fa9a5340501",
+      "name": "Convert Account Memo"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/files/outputs/accounts/demo_service_company/v1/account_memo.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        624,
+        -288
+      ],
+      "id": "88645860-ebd7-416b-ba88-b85cda67432f",
+      "name": "Write Account Memo"
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "mode": "each",
+        "binaryPropertyName": "=data",
+        "options": {
+          "fileName": "agent_spec.json"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        400,
+        16
+      ],
+      "id": "1bca0da2-eaab-4c44-af54-a2f3fb83e571",
+      "name": "Convert Agent Spec"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/files/outputs/accounts/demo_service_company/v1/agent_spec.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        608,
+        16
+      ],
+      "id": "3d4c0b56-5299-4f13-b02a-6c88051231e0",
+      "name": "Write Agent Spec"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Extract Account Memo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Account Memo": {
+      "main": [
+        [
+          {
+            "node": "Generate Agent Spec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Agent Spec": {
+      "main": [
+        [
+          {
+            "node": "Format Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Output": {
+      "main": [
+        [
+          {
+            "node": "Convert Agent Spec",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Convert Account Memo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Account Memo": {
+      "main": [
+        [
+          {
+            "node": "Write Account Memo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Agent Spec": {
+      "main": [
+        [
+          {
+            "node": "Write Agent Spec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "e59f8d7c-e6d4-4753-9629-d018835f7c13",
+  "meta": {
+    "instanceId": "fcb3bfac44d559a90eeef6dd1f31e1d3cb122e120a014b09d05161f2c2c143db"
+  },
+  "id": "sDCeCWwfdZ8FQRXp",
+  "tags": []
+}

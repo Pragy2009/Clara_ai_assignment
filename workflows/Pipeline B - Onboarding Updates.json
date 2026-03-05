@@ -1,0 +1,446 @@
+{
+  "name": "Pipeline B - Onboarding Updates",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -784,
+        -368
+      ],
+      "id": "8f943e85-bac4-4539-be06-ad67e1e60df2",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "fileSelector": "/files/dataset/onboarding_calls/*.txt",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        -656,
+        -240
+      ],
+      "id": "824070ca-f5dc-493d-bc30-7699834d08f9",
+      "name": "Read Onboarding Calls"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "destinationKey": "transcript",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -528,
+        -368
+      ],
+      "id": "0b21cc53-c320-4700-9151-0b615943f9e2",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const text = $json.transcript.toLowerCase();\n\nlet updates = {};\nlet changes = [];\n\nif (text.includes(\"8am\") && text.includes(\"6pm\")) {\n  updates.business_hours = {\n    days: \"monday-friday\",\n    start: \"8am\",\n    end: \"6pm\"\n  };\n\n  changes.push(\"Updated business hours\");\n}\n\nif (text.includes(\"gas leak\")) {\n  updates.emergency_definition = [\n    \"emergency\",\n    \"gas leak\"\n  ];\n\n  changes.push(\"Added gas leak to emergency definition\");\n}\n\nreturn {\n  json: {\n    account_id: \"demo_service_company\",\n    updates,\n    changes\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        -240
+      ],
+      "id": "97731e4e-ee11-489d-b9e8-3eb11b7cecab",
+      "name": "Extract Onboarding Updates"
+    },
+    {
+      "parameters": {
+        "fileSelector": "/files/outputs/accounts/demo_service_company/v1/account_memo.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        -272,
+        -368
+      ],
+      "id": "548e60cd-5fdc-4535-8fb6-943aac449874",
+      "name": "Load Account Memo v1"
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "destinationKey": "existing_account",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -144,
+        -240
+      ],
+      "id": "bdb9c38b-cee9-43f8-ae1a-fd8abf2da0d6",
+      "name": "Extract from File1"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const existing = $json.existing_account || {};\nconst updates = $json.updates || {};\n\nconst updatedAccount = {\n  ...existing,\n  ...updates,\n  version: \"v2\"\n};\n\nreturn {\n  json: {\n    account_memo: updatedAccount,\n\n    agent_spec: {\n      agent_name: updatedAccount.company_name + \" Assistant\",\n      voice: \"friendly_professional\",\n\n      conversation_flow: {\n        greeting: \"Thank you for calling \" + updatedAccount.company_name,\n\n        business_hours_flow: [\n          \"Collect caller name\",\n          \"Collect phone number\",\n          \"Schedule appointment\"\n        ]\n      }\n    },\n\n    changes: $json.changes || []\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        -352
+      ],
+      "id": "e625bbd2-6b76-45e7-a4d2-f5cf5c541e7f",
+      "name": "Merge Account Updates"
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "mode": "each",
+        "options": {
+          "fileName": "account_memo.json"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        288,
+        -352
+      ],
+      "id": "83e9035b-14b2-472d-95f6-323830c898e0",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/files/outputs/accounts/demo_service_company/v2/account_memo.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        -352
+      ],
+      "id": "f3b3d52e-9843-472f-8d29-6b9c7fd8b10e",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "mode": "each",
+        "options": {
+          "fileName": "agent_spec.json"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        288,
+        -192
+      ],
+      "id": "d82810c2-15ea-4e2f-9707-df0d1c2f72ef",
+      "name": "Convert to File1"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/files/outputs/accounts/demo_service_company/v2/account_memo.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        -192
+      ],
+      "id": "d483027e-ea51-45c4-a21b-5fc75d140be9",
+      "name": "Read/Write Files from Disk1"
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "mode": "each",
+        "options": {
+          "fileName": "changelog.json"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        432,
+        0
+      ],
+      "id": "46b47a98-c6e1-4676-aba9-ae833e082c21",
+      "name": "Convert to File2"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/files/outputs/accounts/demo_service_company/v2/changelog.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        592,
+        0
+      ],
+      "id": "7b5bf599-dc2f-47a6-b259-caf776a23bd8",
+      "name": "Read/Write Files from Disk2"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const changes = [];\n\nif ($json.updates?.business_hours) {\n  changes.push({\n    field: \"business_hours\",\n    old: $json.existing_account?.business_hours || null,\n    new: $json.updates.business_hours\n  });\n}\n\nif ($json.updates?.emergency_definition) {\n  changes.push({\n    field: \"emergency_definition\",\n    old: $json.existing_account?.emergency_definition || [],\n    new: $json.updates.emergency_definition\n  });\n}\n\nreturn {\n  json: {\n    changes\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        0
+      ],
+      "id": "60c58782-ff7d-439d-b4b6-db26b3025c85",
+      "name": "Generate Changelog"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"data\": $json.account_memo\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        144,
+        -352
+      ],
+      "id": "8a251efa-3d1e-479f-900c-b5178d2a346f",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"data\": {{$json.agent_spec}}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        144,
+        -192
+      ],
+      "id": "3a7f4714-664b-449b-8ec5-b11d34bf3a12",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"data\": {{$json.changes}}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        144,
+        0
+      ],
+      "id": "92c53c69-ac06-429a-8a85-a4ce288a31ff",
+      "name": "Edit Fields2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Onboarding Calls",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Onboarding Calls": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Extract Onboarding Updates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Onboarding Updates": {
+      "main": [
+        [
+          {
+            "node": "Load Account Memo v1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Account Memo v1": {
+      "main": [
+        [
+          {
+            "node": "Extract from File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File1": {
+      "main": [
+        [
+          {
+            "node": "Merge Account Updates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Account Updates": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Convert to File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        []
+      ]
+    },
+    "Convert to File1": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File2": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Changelog": {
+      "main": [
+        [
+          {
+            "node": "Convert to File2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Convert to File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Generate Changelog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "4721bbfc-5431-4e31-a35d-b1c0f4dab005",
+  "meta": {
+    "instanceId": "fcb3bfac44d559a90eeef6dd1f31e1d3cb122e120a014b09d05161f2c2c143db"
+  },
+  "id": "LJdUnB0Ts4h5WUAK",
+  "tags": []
+}
