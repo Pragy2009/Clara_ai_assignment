@@ -59,3 +59,49 @@ outputs/accounts/demo_service_company/v2/
 ---
 
 # Folder Structure
+clara-ai-assignment/
+│
+├── workflows/
+├── dataset/
+├── outputs/
+├── screenshots/
+└── README.md
+
+
+---
+
+# Technologies Used
+
+- n8n (workflow automation)
+- JSON data processing
+- Local file system storage
+
+---
+
+# Example Outputs
+
+Example files generated:
+
+account_memo.json
+
+agent_spec.json
+
+changelog.json
+
+---
+
+# Future Improvements
+
+Possible improvements include:
+
+- LLM-based transcript parsing
+- Automatic schema validation
+- Integration with cloud storage
+- API-based agent deployment
+
+---
+
+# Author
+
+Pragy Jha
+
